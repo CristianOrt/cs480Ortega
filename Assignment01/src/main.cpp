@@ -142,11 +142,14 @@ void update()
 {
     //total time
     static float angle = 0.0;
+    static float dist = 0.0;
+
     float dt = getDT();// if you have anything moving, use dt.
 
     angle += dt * M_PI/2; //move through 90 degrees a second
+    dist  += dt * -M_PI*10;
     model = glm::translate( glm::mat4(1.0f), glm::vec3(4.0 * sin(angle), 0.0, 4.0 * cos(angle)));
-    model = glm::rotate(model, angle, glm::vec3(4.0 * sin(angle), 0.0, 4.0 * cos(angle)));
+    model = glm::rotate(model, dist, glm::vec3(0.0, 1.0, 0.0));
     // Update the state of the scene
     glutPostRedisplay();//call the display callback
 }
