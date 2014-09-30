@@ -22,11 +22,12 @@ struct Vertex
 //--Evil Global variables
 //Just for this example!
 /////CHANGE FILE NAME HERE////////////////////////////////////////
-const char * obj = "final_table.obj";
+const char * path = "final_table.obj";
 int w = 640, h = 480;// Window size
 static bool rotation = true;
 static bool spin = true;
 static bool rotate = true;
+static int numFaces = 0;
 GLuint program;// The GLSL program handle
 GLuint vbo_geometry;// VBO handle for our geometry
 
@@ -50,7 +51,7 @@ void reshape(int n_w, int n_h);
 void keyboard(unsigned char key, int x_pos, int y_pos);
 void demo_menu(int id);
 void myMouse(int button, int state, int x, int y);
-bool loadOBJ(const char* obj, Vertex geometry[]);
+bool loadOBJ(const char * path, std::vector <glm::vec3> &out_vertices);
 
 //--Resource management
 bool initialize();
@@ -134,17 +135,17 @@ void render()
                            3,//number of elements
                            GL_FLOAT,//type
                            GL_FALSE,//normalized?
-                           sizeof(Vertex),//stride
+                           sizeof(glm::vec3) * 2,//stride
                            0);//offset
 
     glVertexAttribPointer( loc_color,
                            3,
                            GL_FLOAT,
                            GL_FALSE,
-                           sizeof(Vertex),
-                           (void*)offsetof(Vertex,color));
+                           sizeof(glm::vec3) * 2,
+                           (void*)sizeof(glm::vec3));
 
-    glDrawArrays(GL_TRIANGLES, 0, 36);//mode, starting index, count
+    glDrawArrays(GL_TRIANGLES, 0, numFaces * 3);//mode, starting index, count
 
     //clean up
     glDisableVertexAttribArray(loc_position);
@@ -237,77 +238,48 @@ if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
 	}
 }
 
-bool loadOBJ(const char* obj, Vertex geometry[])
+bool loadOBJ(const char * path, std::vector <glm::vec3> &out_vertices)
 {
  std::vector<unsigned int> vertexIndices;
  std::vector<glm::vec3> temp_vertices;
- std::vector<glm::vec3> out_vertices;
- std::ifstream fin;
- fin.open(obj);
- std::cout.precision(7);
- /*
-if(file == NULL) {
-    std::cerr << "[F] FAILED TO LOAD OBJ" << std::endl;
-        return false;
-   }*/
  
- 	
- 	std::string line;
- 	
- 	//std::cout << line << std::endl;
-	
-char dummy;
-float v;
-unsigned int q;
-while(fin.good()){
-        fin >> dummy;
-	if(dummy == 'v')
-	{
+ FILE * file = fopen(path, "r");
+ if(file == NULL){
+ 	printf("can't open file \n");
+	return false;
+ }
+ while(1){
+ 	char lineHeader[128];
+	//read the first word of the line
+	int res = fscanf(file, "%s", lineHeader);
+	if(res == EOF){
+		break;//End of file
+	}
+	//else : parse lineHeader
+	if(strcmp(lineHeader,"v") == 0){
 	glm::vec3 vertex;
-	fin >> v;
-        vertex[0] = v;
-        fin >> v;
-        vertex[1] = v;
-	fin >> v;
-        vertex[2] = v;
+	fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z);
 	temp_vertices.push_back(vertex);
 	}
-        else if(dummy == 'f')
- 	{
-	std::string vertex1, vertex2, vertex3;
-        unsigned int vertexIndex[3];
-        fin >> q;
-        vertexIndex[0]= q;
-    	fin >> q;
-	vertexIndex[1]=q;
-	fin >> q;
-	vertexIndex[2]=q;
-        vertexIndices.push_back(vertexIndex[0]);
+	else if(strcmp(lineHeader, "f") == 0){
+		unsigned int vertexIndex[3];
+		fscanf(file, " %d %d %d\n", &vertexIndex[0], &vertexIndex[1], &vertexIndex[2]);
+	vertexIndices.push_back(vertexIndex[0]);
 	vertexIndices.push_back(vertexIndex[1]);
 	vertexIndices.push_back(vertexIndex[2]);
-		for( unsigned int i =0; i < vertexIndices.size(); i++){
-		unsigned int vertexIndex = vertexIndices[i];
-		glm::vec3 vertex = temp_vertices[vertexIndex-1];
-		out_vertices.push_back(vertex);
-		}
-
+	numFaces++;
 	}
-        else
-	{
-	getline(fin, line);
-        }
-}
-
-for(unsigned int j =0; j < out_vertices.size(); j++){
-   geometry[j].position[0] = (out_vertices[j])[0];
-   geometry[j].position[1] = (out_vertices[j])[1];
-   geometry[j].position[2] = (out_vertices[j])[2];
-   geometry[j].color[0]= 0.0;
-   geometry[j].color[1]=0.0;
-   geometry[j].color[2]=0.0;
-}
-
-return true;
+ }
+ //for each vertex of each triangle
+ for(unsigned int i=0; i<vertexIndices.size(); i++){
+	unsigned int vertexIndex = vertexIndices[i];
+	glm::vec3 vertex = temp_vertices[vertexIndex-1];
+	glm::vec3 color = glm::vec3(1.0,1.0,0.0);
+	out_vertices.push_back(vertex);
+	out_vertices.push_back(color);
+	}
+ return true;
+	
 }
 bool initialize()
 {
@@ -315,63 +287,19 @@ bool initialize()
 
     //this defines a cube, this is why a model loader is nice
     //you can also do this with a draw elements and indices, try to get that working
-    int NUM_VERTICES = 15000;
+    std::vector<glm::vec3> vertices;
 
-    Vertex* geometry= new Vertex [NUM_VERTICES];
-   loadOBJ(obj, geometry);
+    bool flag;
+    flag = loadOBJ(path, vertices);
+    if(!flag){
+	std::cerr << "ERROR IN FILE" <<	 std::endl;
+	}
 
-    /*Vertex geometry[] = { {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-                          
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{-1.0, -1.0, -1.0}, {0.0, 0.0, 0.0}},
-
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{-1.0, -1.0, 1.0}, {0.0, 0.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-                          
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-
-                          {{1.0, -1.0, -1.0}, {1.0, 0.0, 0.0}},
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{1.0, 1.0, -1.0}, {1.0, 1.0, 0.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, -1.0}, {0.0, 1.0, 0.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-
-                          {{1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}},
-                          {{-1.0, 1.0, 1.0}, {0.0, 1.0, 1.0}},
-                          {{1.0, -1.0, 1.0}, {1.0, 0.0, 1.0}}
-                        };
-    */// Create a Vertex Buffer object to store this vertex info on the GPU
+    
+    // Create a Vertex Buffer object to store this vertex info on the GPU
     glGenBuffers(1, &vbo_geometry);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_geometry);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(geometry), geometry, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
 
     //--Geometry done
 
