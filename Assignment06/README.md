@@ -21,4 +21,4 @@ To build this example just
 
 The excutable will be put in bin
 
-My program should load "capsule" file and display it on the screen using the assimp loader along with the shader.
+My program should load "capsule" file and display it on the screen using the assimp loader along with the texture. I converted the .jpg to a .png because SOIL can't read .jpg

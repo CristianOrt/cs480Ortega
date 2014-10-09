@@ -252,30 +252,21 @@ if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
 bool initialize()
 {
    
-   glGenTextures(1,&textureID); 
-   glBindTexture(GL_TEXTURE_2D, textureID);
-
-   unsigned char bytes[]=
-   {
-	255,0,0,
-	0,255,0,
-	0,0,255,
-	255,255,0
-   };
-
-   textureID=SOIL_create_OGL_texture
+   textureID = SOIL_load_OGL_texture
 	(
-	bytes,
-	2,2,3,
-	textureID,
-	SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y
+		"capsule.png",
+		SOIL_LOAD_AUTO,
+		SOIL_CREATE_NEW_ID,
+		SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
 	);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	if(textureID == 0)
 		printf("SOIL Loading Error: %s\n", SOIL_last_result());
    
-    textureSamplerUniform = glGetUniformLocation(program,"textureSampler");
+    textureSamplerUniform = glGetUniformLocation
+
+(program,"textureSampler");
     std::vector<float> outVertices;
     std::vector<float> outUVs;
     std::vector<float> outNormals;
